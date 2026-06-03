@@ -1,0 +1,49 @@
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Lua/Roblox
+*.rbxlx
+*.rbxl
+*.rbxm
+*.rbxmx
+*.lua.bak
+*.luau.bak
+
+# Exports
+export/
+exports/
+output/
+*.json
+!docs/*.json
+!config.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp
+temp/
+tmp/
+*.tmp
+
+# Workspace
+workspace/
+saves/
+.roblox/
+
+# Build artifacts
+dist/
+build/
+*.o
+*.a
+*.so
+
+# Dependencies
+node_modules/
+packages/
