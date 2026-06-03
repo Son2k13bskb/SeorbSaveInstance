@@ -1,0 +1,100 @@
+MIT License + UniversalSynSaveInstance Attribution
+
+SeorbSaveInstance - Advanced Full Map SaveInstance for Roblox
+Based on UniversalSynSaveInstance (https://github.com/luau/UniversalSynSaveInstance)
+
+==============================================================================
+IMPORTANT ATTRIBUTION
+==============================================================================
+
+This project is a derivative work of UniversalSynSaveInstance.
+
+You MUST include the following credit string when using this software:
+"UniversalSynSaveInstance https://discord.gg/wx4ThpAsmw"
+
+Additionally, you MUST include proper attribution to:
+- Original Project: UniversalSynSaveInstance by luau
+- This Fork: SeorbSaveInstance by Son2k13bskb
+
+You are NOT allowed to claim authorship of the source code provided in this 
+or the parent repository.
+
+==============================================================================
+MIT LICENSE TERMS
+==============================================================================
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+You MUST preserve and include:
+1. The original UniversalSynSaveInstance credit
+2. This modified notice
+3. All author attributions
+
+==============================================================================
+DISCLAIMERS
+==============================================================================
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+This project is provided for development, debugging, archival, and research
+purposes within the Roblox platform ONLY.
+
+Users agree to:
+✓ NOT use this software to violate Roblox Terms of Service
+✓ NOT use this for unauthorized asset extraction or distribution
+✓ NOT use this to harm or cheat in games
+✓ RESPECT intellectual property rights
+✓ Use only on games they own or have permission to modify
+
+Users are SOLELY RESPONSIBLE for ensuring their usage complies with all
+applicable rules, including Roblox's Terms of Use and platform policies.
+
+The maintainers DO NOT support or condone misuse of this software and are
+NOT responsible for how it is used.
+
+==============================================================================
+CREDITS
+==============================================================================
+
+UniversalSynSaveInstance Team:
+- Original Creator: luau Organization (https://github.com/luau)
+- Contributors: Anaminus, Dekkonot, mblouka, Acrillis, LorekeeperZinnia
+
+SeorbSaveInstance Enhancements:
+- Author: Son2k13bskb
+
+==============================================================================
+USAGE REQUIREMENTS
+==============================================================================
+
+When using SeorbSaveInstance, you MUST:
+
+1. Include this exact notice in your project:
+   "SeorbSaveInstance https://github.com/Son2k13bskb/SeorbSaveInstance
+    (Based on UniversalSynSaveInstance https://github.com/luau/UniversalSynSaveInstance)
+    UniversalSynSaveInstance https://discord.gg/wx4ThpAsmw"
+
+2. Include a link to this license file
+
+3. NOT remove or obscure any copyright notices
+
+4. NOT claim to be the original author
+
+==============================================================================
+
+For the full license of UniversalSynSaveInstance, see:
+https://github.com/luau/UniversalSynSaveInstance/blob/main/LICENSE
