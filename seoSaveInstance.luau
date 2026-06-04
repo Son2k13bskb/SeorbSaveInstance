@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 --!divine-intellect
--- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (Ultimate Safe Fix)
+-- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (Anti-Cache Edition)
 -- Based on UniversalSynSaveInstance (https://github.com/luau/UniversalSynSaveInstance)
 
 local function createSeorbSaveInstance()
@@ -258,7 +258,9 @@ local function createSeorbSaveInstance()
 		-- ========== STAGE 3: Prepare Save Data ==========
 		status.Stage = "PrepareSave"
 		
-		-- Lấy tên game an toàn tuyệt đối, không đụng vào PlaceName nữa
+		-- DÒNG KIỂM TRA PHIÊN BẢN (NẾU THẤY DÒNG NÀY NGHĨA LÀ CODE MỚI ĐANG CHẠY)
+		print("🔴 [CHECK] ĐANG CHẠY BẢN MỚI 100% - KHÔNG CÓ PLACENAME TRONG CODE")
+		
 		local safeGameName = "Unknown Game"
 		pcall(function()
 			safeGameName = game.Name
