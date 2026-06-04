@@ -1,104 +1,38 @@
 --!native
 --!optimize 2
 --!divine-intellect
--- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (Optimized)
--- Based on UniversalSynSaveInstance (https://github.com/luau/UniversalSynSaveInstance)
+-- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (Max Speed C++ JSON)
+
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
 local function createSeorbSaveInstance()
-	-- ============================================================
-	-- CONFIGURATION & INITIALIZATION
-	-- ============================================================
-	
 	local SeorbConfig = {
-		-- Anti-Kick Settings
-		AntiKickLevel = 5,
-		RequestThrottle = 100,
-		HumanizeRequests = true,
-		MaxRetries = 3,
-		TimeoutRandomization = 0.5,
-		
-		-- Scanning Settings
-		EnableTerrainScan = true,
-		EnableUnionMeshScan = true,
-		UnionChunkSize = 5,
-		CSGErrorHandling = "AUTO",
-		
-		-- Output Settings
 		SaveToExploitWorkspace = true,
 		FilePath = "SeorbSaveInstance_FullMap",
-		
-		-- Performance & Safety
-		MaxMemoryUsage = 512 * 1024 * 1024,
-		CacheSize = 10000,
-		AsyncMode = true,
-		ChunkProcessing = true,
-		ChunkDelay = 50,
-		MaxScanTime = 570, -- Giới hạn tối đa 9.5 phút (570 giây) để đảm bảo dưới 10 phút
+		MaxScanTime = 570, -- 9.5 phút chặn trên
 	}
-	
-	-- ============================================================
-	-- UTILITY FUNCTIONS
-	-- ============================================================
-	
-	local function sleep(ms)
-		local start = tick()
-		while tick() - start < ms / 1000 do
-			game:GetService("RunService").Heartbeat:Wait()
-		end
-	end
-	
-	local function humanizedWait(baseMs)
-		if SeorbConfig.HumanizeRequests then
-			local variance = math.random(-500, 500) / 1000
-			local delay = math.max(10, baseMs + variance)
-			sleep(delay)
-		else
-			sleep(baseMs)
-		end
-	end
-	
-	local function antiKickDelay(level)
-		level = level or SeorbConfig.AntiKickLevel
-		local delays = {10, 25, 50, 75, 100, 150, 250}
-		return delays[math.min(level, #delays)]
-	end
 	
 	-- ============================================================
 	-- FILE I/O - EXPLOIT CLIENT WORKSPACE
 	-- ============================================================
 	
-	local function serializeToJSON(data)
-		local function serializeValue(v)
-			local t = type(v)
-			if t == "string" then
-				return '"' .. v:gsub('"', '\\"') .. '"'
-			elseif t == "number" then
-				return tostring(v)
-			elseif t == "boolean" then
-				return v and "true" or "false"
-			elseif t == "table" then
-				local result = "{"
-				local first = true
-				for k, val in pairs(v) do
-					if not first then result = result .. "," end
-					result = result .. '"' .. tostring(k) .. '":' .. serializeValue(val)
-					first = false
-				end
-				result = result .. "}"
-				return result
-			end
-			return "null"
-		end
-		return serializeValue(data)
-	end
-	
 	local function saveToWorkspace(filename, data)
 		if not SeorbConfig.SaveToExploitWorkspace then return false end
+		
+		-- Sử dụng HttpService của game để mã hóa JSON ở tốc độ C++ thay vì Lua
+		local successEncode, json = pcall(function()
+			return HttpService:JSONEncode(data)
+		end)
+		
+		if not successEncode then 
+			print("Lỗi khi tạo JSON!")
+			return false 
+		end
 		
 		local methods = {
 			function()
 				if writefile then
-					local json = serializeToJSON(data)
 					writefile(filename .. ".json", json)
 					return true
 				end
@@ -109,7 +43,6 @@ local function createSeorbSaveInstance()
 					if not isfile(folder .. "test.txt") then
 						writefile(folder .. "test.txt", "SeorbSaveInstance")
 					end
-					local json = serializeToJSON(data)
 					writefile(folder .. filename .. ".json", json)
 					return true
 				end
@@ -129,10 +62,7 @@ local function createSeorbSaveInstance()
 	
 	local function scanFullMap(workspace_root, options)
 		options = options or {}
-		local scanned = {}
-		local unions = {}
-		local meshes = {}
-		local parts = {}
+		local scanned, unions, meshes, parts = {}, {}, {}, {}
 		local totalProcessed = 0
 		
 		local startTime = tick()
@@ -141,72 +71,37 @@ local function createSeorbSaveInstance()
 		
 		local function recursiveScan(instance, depth)
 			if depth > 100 then return end
-			
-			-- Kiểm tra nếu vượt quá thời gian tối đa (10 phút) thì dừng ngay lập tức
-			if tick() - startTime > maxDuration then
-				return
-			end
+			if tick() - startTime > maxDuration then return end
 			
 			totalProcessed = totalProcessed + 1
 			
-			-- Kiểm tra định kỳ để nhường frame (Tránh crash game nhưng vẫn đạt tốc độ tối đa)
-			if totalProcessed % 500 == 0 then
-				if options.ShowStatus and totalProcessed % 5000 == 0 then
-					print("📍 Scanned: " .. totalProcessed .. " objects...")
-				end
-				
-				-- Nếu một khung hình xử lý tốn hơn 12ms, nhường quyền cho engine chạy tiếp để không bị kick/freeze
+			-- Nhường frame nếu xử lý quá 12ms (tránh văng game nhưng giữ tốc độ max)
+			if totalProcessed % 1000 == 0 then
 				if tick() - lastYieldTime > 0.012 then
-					game:GetService("RunService").Heartbeat:Wait()
+					RunService.Heartbeat:Wait()
 					lastYieldTime = tick()
 				end
 			end
 			
 			table.insert(scanned, instance)
 			
-			if instance:IsA("BasePart") then
-				table.insert(parts, instance)
-			end
-			if instance:FindFirstChild("_UnionIsPart") or instance:IsA("UnionOperation") then
-				table.insert(unions, instance)
-			end
-			if instance:IsA("MeshPart") or instance:FindFirstChild("Mesh") then
-				table.insert(meshes, instance)
-			end
+			if instance:IsA("BasePart") then table.insert(parts, instance) end
+			if instance:FindFirstChild("_UnionIsPart") or instance:IsA("UnionOperation") then table.insert(unions, instance) end
+			if instance:IsA("MeshPart") or instance:FindFirstChild("Mesh") then table.insert(meshes, instance) end
 			
 			local children = instance:GetChildren()
 			for _, child in ipairs(children) do
 				recursiveScan(child, depth + 1)
-				if tick() - startTime > maxDuration then return end -- Thoát vòng lặp con nếu hết giờ
 			end
 		end
 		
 		recursiveScan(workspace_root, 0)
 		
 		return {
-			AllInstances = scanned,
-			Parts = parts,
-			Unions = unions,
-			Meshes = meshes,
 			TotalCount = #scanned,
 			PartCount = #parts,
 			UnionCount = #unions,
 			MeshCount = #meshes,
-		}
-	end
-	
-	-- ============================================================
-	-- TERRAIN SCANNING (LIGHTWEIGHT)
-	-- ============================================================
-	
-	local function scanTerrain()
-		local terrain = workspace.Terrain
-		if not terrain then return {} end
-		
-		return {
-			Found = true,
-			Position = terrain.Position,
-			Size = terrain.Size,
 		}
 	end
 	
@@ -216,49 +111,17 @@ local function createSeorbSaveInstance()
 	
 	local function saveInstanceAdvanced(options)
 		options = options or {}
-		for key, value in pairs(options) do
-			SeorbConfig[key] = value
-		end
+		local startTime = tick()
 		
-		local status = {
-			StartTime = tick(),
-			Stage = "Initializing",
-			Progress = 0,
-			TotalObjects = 0,
-			ProcessedObjects = 0,
-			Errors = {},
-		}
-		
-		-- ========== STAGE 1: Full Map Scan ==========
 		if options.ShowStatus then 
-			print("\n🚀 SeorbSaveInstance v1.1 [OPTIMIZED]")
-			print("📍 Stage 1: Scanning Full Map (High Speed mode)... \n")
+			print("\n🚀 Đang quét Map bằng SeorbSaveInstance (Bản độ lại)...") 
 		end
-		status.Stage = "FullMapScan"
 		
+		-- 1. Quét Map
 		local mapData = scanFullMap(workspace, options)
-		status.TotalObjects = mapData.TotalCount
+		RunService.Heartbeat:Wait()
 		
-		if options.ShowStatus then 
-			print("✅ Scan Step Completed!")
-			print("   📊 Total Objects Scanned: " .. mapData.TotalCount)
-			print("   🔲 Parts: " .. mapData.PartCount)
-			print("   ⚙️ Unions: " .. mapData.UnionCount)
-			print("   🎨 Meshes: " .. mapData.MeshCount)
-		end
-		
-		game:GetService("RunService").Heartbeat:Wait()
-		
-		-- ========== STAGE 2: Terrain Scan ==========
-		if SeorbConfig.EnableTerrainScan then
-			status.Stage = "TerrainScan"
-			local terrainData = scanTerrain()
-		end
-		
-		game:GetService("RunService").Heartbeat:Wait()
-		
-		-- ========== STAGE 3: Prepare Save Data ==========
-		status.Stage = "PrepareSave"
+		-- 2. Chuẩn bị dữ liệu
 		local saveData = {
 			SaveTime = os.time(),
 			GameName = game.PlaceName or "Unknown",
@@ -270,44 +133,29 @@ local function createSeorbSaveInstance()
 				TotalUnions = mapData.UnionCount,
 				TotalMeshes = mapData.MeshCount,
 			},
-			Configuration = {
-				AntiKickLevel = SeorbConfig.AntiKickLevel,
-				EnableTerrainScan = SeorbConfig.EnableTerrainScan,
-				EnableUnionMeshScan = SeorbConfig.EnableUnionMeshScan,
-				CSGErrorHandling = SeorbConfig.CSGErrorHandling,
-			},
 			ExecutionInfo = {
 				ExecutorName = identifyexecutor and identifyexecutor() or "Unknown",
-				Luau = "native",
 			},
 		}
+		RunService.Heartbeat:Wait()
 		
-		game:GetService("RunService").Heartbeat:Wait()
+		-- 3. Lưu File
+		if options.ShowStatus then print("💾 Đang ghi file JSON (Tốc độ bàn thờ)...") end
+		local filename = SeorbConfig.FilePath or "SeorbSaveInstance_FullMap"
+		local saveSuccess = saveToWorkspace(filename, saveData)
 		
-		-- ========== STAGE 4: Save to Workspace ==========
-		status.Stage = "FileSaving"
-		local saveSuccess = false
-		if SeorbConfig.SaveToExploitWorkspace then
-			local filename = SeorbConfig.FilePath or "SeorbSaveInstance_FullMap"
-			saveSuccess = saveToWorkspace(filename, saveData)
-		end
-		
-		-- ========== COMPLETION ==========
-		local executionTime = tick() - status.StartTime
+		-- 4. Báo cáo
+		local executionTime = tick() - startTime
 		if options.ShowStatus then 
 			print("\n" .. string.rep("=", 50))
-			print("🎉 SAVE PROCESS DONE!")
-			print("   ⏱️ Total Time: " .. string.format("%.2f", executionTime) .. "s")
-			print("   ✨ Status: " .. (saveSuccess and "SUCCESS" or "FAILED/PARTIAL"))
+			print("🎉 HOÀN THÀNH!")
+			print("   ⏱️ Tổng thời gian: " .. string.format("%.2f", executionTime) .. " giây")
+			print("   📊 Tổng số lượng Object: " .. mapData.TotalCount)
+			print("   ✨ Trạng thái: " .. (saveSuccess and "THÀNH CÔNG" or "LỖI LƯU FILE"))
 			print(string.rep("=", 50) .. "\n")
 		end
 		
-		return {
-			Status = saveSuccess and "Success" or "Partial",
-			ExecutionTime = executionTime,
-			MapData = mapData,
-			SaveData = saveData,
-		}
+		return saveSuccess
 	end
 	
 	return function(options)
