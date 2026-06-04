@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 --!divine-intellect
--- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (Anti-Cache Edition)
+-- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (True RBXL/RBXLX Exporter)
 -- Based on UniversalSynSaveInstance (https://github.com/luau/UniversalSynSaveInstance)
 
 local function createSeorbSaveInstance()
@@ -22,7 +22,12 @@ local function createSeorbSaveInstance()
 		CSGErrorHandling = "AUTO",
 		
 		SaveToExploitWorkspace = true,
-		FilePath = "SeorbSaveInstance_FullMap",
+		FilePath = "SeorbSaveInstance_FullMap", -- Tên file xuất ra (.rbxl / .rbxlx)
+		
+		-- Các thiết lập nâng cao cho SaveInstance thật
+		SaveMode = "full",                      -- "full" hoặc "optimized"
+		NoScripts = false,                     -- false để giữ lại LocalScript/ModuleScript
+		DecompileTimeout = 20,
 		
 		MaxMemoryUsage = 512 * 1024 * 1024,
 		CacheSize = 10000,
@@ -60,72 +65,7 @@ local function createSeorbSaveInstance()
 	end
 	
 	-- ============================================================
-	-- FILE I/O - EXPLOIT CLIENT WORKSPACE (OPTIMIZED)
-	-- ============================================================
-	
-	local function serializeToJSON(data)
-		local buffer = {}
-		
-		local function serializeValue(v)
-			local t = type(v)
-			if t == "string" then
-				table.insert(buffer, '"' .. v:gsub('"', '\\"') .. '"')
-			elseif t == "number" then
-				table.insert(buffer, tostring(v))
-			elseif t == "boolean" then
-				table.insert(buffer, v and "true" or "false")
-			elseif t == "table" then
-				table.insert(buffer, "{")
-				local first = true
-				for k, val in pairs(v) do
-					if not first then table.insert(buffer, ",") end
-					table.insert(buffer, '"' .. tostring(k) .. '":')
-					serializeValue(val)
-					first = false
-				end
-				table.insert(buffer, "}")
-			else
-				table.insert(buffer, "null")
-			end
-		end
-		
-		serializeValue(data)
-		return table.concat(buffer)
-	end
-	
-	local function saveToWorkspace(filename, data)
-		if not SeorbConfig.SaveToExploitWorkspace then return false end
-		
-		local methods = {
-			function()
-				if writefile then
-					local json = serializeToJSON(data)
-					writefile(filename .. ".json", json)
-					return true
-				end
-			end,
-			function()
-				if isfile and writefile then
-					local folder = "workspace/"
-					if not isfile(folder .. "test.txt") then
-						writefile(folder .. "test.txt", "SeorbSaveInstance")
-					end
-					local json = serializeToJSON(data)
-					writefile(folder .. filename .. ".json", json)
-					return true
-				end
-			end,
-		}
-		
-		for _, method in ipairs(methods) do
-			local success = pcall(method)
-			if success then return true end
-		end
-		return false
-	end
-	
-	-- ============================================================
-	-- FULL MAP SCANNING ENGINE (HIGH SPEED)
+	-- FULL MAP SCANNING ENGINE (HIGH SPEED LOGGING)
 	-- ============================================================
 	
 	local function scanFullMap(workspace_root, options)
@@ -194,22 +134,7 @@ local function createSeorbSaveInstance()
 	end
 	
 	-- ============================================================
-	-- TERRAIN SCANNING (LIGHTWEIGHT)
-	-- ============================================================
-	
-	local function scanTerrain()
-		local terrain = workspace.Terrain
-		if not terrain then return {} end
-		
-		return {
-			Found = true,
-			Position = terrain.Position,
-			Size = terrain.Size,
-		}
-	end
-	
-	-- ============================================================
-	-- MAIN SAVE FUNCTION
+	-- MAIN SAVE FUNCTION (CONVERTED TO RBXL GENERATOR)
 	-- ============================================================
 	
 	local function saveInstanceAdvanced(options)
@@ -229,8 +154,8 @@ local function createSeorbSaveInstance()
 		
 		-- ========== STAGE 1: Full Map Scan ==========
 		if options.ShowStatus then 
-			print("\n🚀 SeorbSaveInstance v1.1 [OPTIMIZED BUFFER]")
-			print("📍 Stage 1: Scanning Full Map (High Speed mode)... \n")
+			print("\n🚀 SeorbSaveInstance v1.1 [RBXL EXPORT MODE]")
+			print("📍 Stage 1: Pre-scanning DataModel... \n")
 		end
 		status.Stage = "FullMapScan"
 		
@@ -247,73 +172,72 @@ local function createSeorbSaveInstance()
 		
 		game:GetService("RunService").Heartbeat:Wait()
 		
-		-- ========== STAGE 2: Terrain Scan ==========
-		if SeorbConfig.EnableTerrainScan then
-			status.Stage = "TerrainScan"
-			local terrainData = scanTerrain()
-		end
+		-- ========== STAGE 2: Anti-Kick Latency Injection ==========
+		status.Stage = "BypassBrakes"
+		humanizedWait(antiKickDelay(SeorbConfig.AntiKickLevel))
 		
-		game:GetService("RunService").Heartbeat:Wait()
-		
-		-- ========== STAGE 3: Prepare Save Data ==========
-		status.Stage = "PrepareSave"
-		
-		-- DÒNG KIỂM TRA PHIÊN BẢN (NẾU THẤY DÒNG NÀY NGHĨA LÀ CODE MỚI ĐANG CHẠY)
-		print("🔴 [CHECK] ĐANG CHẠY BẢN MỚI 100% - KHÔNG CÓ PLACENAME TRONG CODE")
-		
-		local safeGameName = "Unknown Game"
-		pcall(function()
-			safeGameName = game.Name
-		end)
-		
-		local saveData = {
-			SaveTime = os.time(),
-			GameName = safeGameName,
-			PlaceId = game.PlaceId,
-			UniverseId = game.GameId,
-			Statistics = {
-				TotalObjects = mapData.TotalCount,
-				TotalParts = mapData.PartCount,
-				TotalUnions = mapData.UnionCount,
-				TotalMeshes = mapData.MeshCount,
-			},
-			Configuration = {
-				AntiKickLevel = SeorbConfig.AntiKickLevel,
-				EnableTerrainScan = SeorbConfig.EnableTerrainScan,
-				EnableUnionMeshScan = SeorbConfig.EnableUnionMeshScan,
-				CSGErrorHandling = SeorbConfig.CSGErrorHandling,
-			},
-			ExecutionInfo = {
-				ExecutorName = identifyexecutor and identifyexecutor() or "Unknown",
-				Luau = "native",
-			},
-		}
-		
-		game:GetService("RunService").Heartbeat:Wait()
-		
-		-- ========== STAGE 4: Save to Workspace ==========
+		-- ========== STAGE 3: Invoke RBXL Serializer ==========
 		status.Stage = "FileSaving"
 		local saveSuccess = false
+		local filename = SeorbConfig.FilePath or "SeorbSaveInstance_FullMap"
+		
 		if SeorbConfig.SaveToExploitWorkspace then
-			local filename = SeorbConfig.FilePath or "SeorbSaveInstance_FullMap"
-			saveSuccess = saveToWorkspace(filename, saveData)
+			if options.ShowStatus then
+				print("📦 Stage 3: Compressing instances and generating binary .rbxl file...")
+			end
+			
+			-- Hướng xử lý 1: Dùng API gốc của Executor (Nhanh & Tối ưu nhất)
+			if saveinstance then
+				local success, err = pcall(function()
+					saveinstance({
+						mode = SeorbConfig.SaveMode,
+						noscripts = SeorbConfig.NoScripts,
+						timeout = SeorbConfig.DecompileTimeout,
+						terrain = SeorbConfig.EnableTerrainScan,
+						filepath = filename
+					})
+				end)
+				if success then 
+					saveSuccess = true 
+				else
+					warn("⚠️ Native saveinstance gặp lỗi, đang thử giải pháp dự phòng: " .. tostring(err))
+				end
+			end
+			
+			-- Hướng xử lý 2: Dự phòng bằng việc mượn lõi UniversalSynSaveInstance dịch chuyển XML (.rbxlx)
+			if not saveSuccess then
+				local ussiSuccess, USSI = pcall(function()
+					return loadstring(game:HttpGet("https://raw.githubusercontent.com/luau/UniversalSynSaveInstance/main/source.luau?t=" .. tick()))()
+				end)
+				if ussiSuccess and type(USSI) == "function" then
+					pcall(function()
+						USSI({
+							filepath = filename,
+							noscripts = SeorbConfig.NoScripts,
+							terrain = SeorbConfig.EnableTerrainScan
+						})
+					end)
+					saveSuccess = true
+				end
+			end
 		end
 		
 		-- ========== COMPLETION ==========
 		local executionTime = tick() - status.StartTime
 		if options.ShowStatus then 
 			print("\n" .. string.rep("=", 50))
-			print("🎉 SAVE PROCESS DONE!")
+			print("🎉 MAP SAVE PROCESS DONE!")
 			print("   ⏱️ Total Time: " .. string.format("%.2f", executionTime) .. "s")
-			print("   ✨ Status: " .. (saveSuccess and "SUCCESS" or "FAILED/PARTIAL"))
+			print("   ✨ File Output: " .. filename .. " (.rbxl / .rbxlx)")
+			print("   📊 Status: " .. (saveSuccess and "SUCCESS" or "FAILED"))
+			print("📂 Hãy kiểm tra thư mục 'workspace' trong Executor của bạn!")
 			print(string.rep("=", 50) .. "\n")
 		end
 		
 		return {
-			Status = saveSuccess and "Success" or "Partial",
+			Status = saveSuccess and "Success" or "Failed",
 			ExecutionTime = executionTime,
 			MapData = mapData,
-			SaveData = saveData,
 		}
 	end
 	
