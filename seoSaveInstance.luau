@@ -1,9 +1,8 @@
 --!native
 --!optimize 2
 --!divine-intellect
--- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance
+-- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (Optimized)
 -- Based on UniversalSynSaveInstance (https://github.com/luau/UniversalSynSaveInstance)
--- Credit: UniversalSynSaveInstance https://discord.gg/wx4ThpAsmw
 
 local function createSeorbSaveInstance()
 	-- ============================================================
@@ -25,15 +24,16 @@ local function createSeorbSaveInstance()
 		CSGErrorHandling = "AUTO",
 		
 		-- Output Settings
-		SaveToExploitWorkspace = true,  -- Save to exploit client workspace
+		SaveToExploitWorkspace = true,
 		FilePath = "SeorbSaveInstance_FullMap",
 		
 		-- Performance & Safety
 		MaxMemoryUsage = 512 * 1024 * 1024,
 		CacheSize = 10000,
-		AsyncMode = true,  -- Prevent freezing
-		ChunkProcessing = true,  -- Process in chunks
-		ChunkDelay = 50,  -- ms delay between chunks
+		AsyncMode = true,
+		ChunkProcessing = true,
+		ChunkDelay = 50,
+		MaxScanTime = 570, -- Giới hạn tối đa 9.5 phút (570 giây) để đảm bảo dưới 10 phút
 	}
 	
 	-- ============================================================
@@ -59,16 +59,8 @@ local function createSeorbSaveInstance()
 	
 	local function antiKickDelay(level)
 		level = level or SeorbConfig.AntiKickLevel
-		local delays = {
-			10,   -- Level 1
-			25,   -- Level 2
-			50,   -- Level 3
-			75,   -- Level 4
-			100,  -- Level 5
-			150,  -- Level 6
-			250,  -- Level 7
-		}
-		return delays[math.min(level, 7)]
+		local delays = {10, 25, 50, 75, 100, 150, 250}
+		return delays[math.min(level, #delays)]
 	end
 	
 	-- ============================================================
@@ -76,7 +68,6 @@ local function createSeorbSaveInstance()
 	-- ============================================================
 	
 	local function serializeToJSON(data)
-		-- Simple JSON serialization
 		local function serializeValue(v)
 			local t = type(v)
 			if t == "string" then
@@ -98,16 +89,13 @@ local function createSeorbSaveInstance()
 			end
 			return "null"
 		end
-		
 		return serializeValue(data)
 	end
 	
 	local function saveToWorkspace(filename, data)
 		if not SeorbConfig.SaveToExploitWorkspace then return false end
 		
-		-- Try multiple save methods (exploit client compatibility)
 		local methods = {
-			-- Method 1: writefile (most exploits support this)
 			function()
 				if writefile then
 					local json = serializeToJSON(data)
@@ -115,8 +103,6 @@ local function createSeorbSaveInstance()
 					return true
 				end
 			end,
-			
-			-- Method 2: saveinstance to workspace folder
 			function()
 				if isfile and writefile then
 					local folder = "workspace/"
@@ -128,30 +114,17 @@ local function createSeorbSaveInstance()
 					return true
 				end
 			end,
-			
-			-- Method 3: Direct file write
-			function()
-				if writefile then
-					local fullPath = filename .. ".json"
-					local json = serializeToJSON(data)
-					writefile(fullPath, json)
-					return true
-				end
-			end,
 		}
 		
 		for _, method in ipairs(methods) do
 			local success = pcall(method)
-			if success then
-				return true
-			end
+			if success then return true end
 		end
-		
 		return false
 	end
 	
 	-- ============================================================
-	-- FULL MAP SCANNING ENGINE (OPTIMIZED)
+	-- FULL MAP SCANNING ENGINE (HIGH SPEED)
 	-- ============================================================
 	
 	local function scanFullMap(workspace_root, options)
@@ -162,41 +135,49 @@ local function createSeorbSaveInstance()
 		local parts = {}
 		local totalProcessed = 0
 		
+		local startTime = tick()
+		local maxDuration = SeorbConfig.MaxScanTime
+		local lastYieldTime = tick()
+		
 		local function recursiveScan(instance, depth)
 			if depth > 100 then return end
 			
-			-- Prevent freeze - yield every iteration
-			totalProcessed = totalProcessed + 1
-			if totalProcessed % 10 == 0 then
-				if options.ShowStatus then
-					print("📍 Scanned: " .. totalProcessed .. " objects")
-				end
-				game:GetService("RunService").Heartbeat:Wait()
+			-- Kiểm tra nếu vượt quá thời gian tối đa (10 phút) thì dừng ngay lập tức
+			if tick() - startTime > maxDuration then
+				return
 			end
 			
-			humanizedWait(antiKickDelay() / 10)  -- Smaller delay
+			totalProcessed = totalProcessed + 1
+			
+			-- Kiểm tra định kỳ để nhường frame (Tránh crash game nhưng vẫn đạt tốc độ tối đa)
+			if totalProcessed % 500 == 0 then
+				if options.ShowStatus and totalProcessed % 5000 == 0 then
+					print("📍 Scanned: " .. totalProcessed .. " objects...")
+				end
+				
+				-- Nếu một khung hình xử lý tốn hơn 12ms, nhường quyền cho engine chạy tiếp để không bị kick/freeze
+				if tick() - lastYieldTime > 0.012 then
+					game:GetService("RunService").Heartbeat:Wait()
+					lastYieldTime = tick()
+				end
+			end
 			
 			table.insert(scanned, instance)
 			
-			-- Categorize instances
 			if instance:IsA("BasePart") then
 				table.insert(parts, instance)
 			end
-			
-			-- Detect Unions
 			if instance:FindFirstChild("_UnionIsPart") or instance:IsA("UnionOperation") then
 				table.insert(unions, instance)
 			end
-			
-			-- Detect Meshes
 			if instance:IsA("MeshPart") or instance:FindFirstChild("Mesh") then
 				table.insert(meshes, instance)
 			end
 			
-			-- Recursively scan children
 			local children = instance:GetChildren()
 			for _, child in ipairs(children) do
 				recursiveScan(child, depth + 1)
+				if tick() - startTime > maxDuration then return end -- Thoát vòng lặp con nếu hết giờ
 			end
 		end
 		
@@ -222,16 +203,11 @@ local function createSeorbSaveInstance()
 		local terrain = workspace.Terrain
 		if not terrain then return {} end
 		
-		local terrainData = {
+		return {
 			Found = true,
 			Position = terrain.Position,
 			Size = terrain.Size,
 		}
-		
-		-- Get terrain size (lightweight)
-		humanizedWait(antiKickDelay() / 5)
-		
-		return terrainData
 	end
 	
 	-- ============================================================
@@ -240,8 +216,6 @@ local function createSeorbSaveInstance()
 	
 	local function saveInstanceAdvanced(options)
 		options = options or {}
-		
-		-- Merge options
 		for key, value in pairs(options) do
 			SeorbConfig[key] = value
 		end
@@ -257,8 +231,8 @@ local function createSeorbSaveInstance()
 		
 		-- ========== STAGE 1: Full Map Scan ==========
 		if options.ShowStatus then 
-			print("\n🚀 SeorbSaveInstance v1.1")
-			print("📍 Stage 1: Scanning Full Map...\n")
+			print("\n🚀 SeorbSaveInstance v1.1 [OPTIMIZED]")
+			print("📍 Stage 1: Scanning Full Map (High Speed mode)... \n")
 		end
 		status.Stage = "FullMapScan"
 		
@@ -266,93 +240,65 @@ local function createSeorbSaveInstance()
 		status.TotalObjects = mapData.TotalCount
 		
 		if options.ShowStatus then 
-			print("✅ Scan Complete!")
-			print("   📊 Total Objects: " .. mapData.TotalCount)
+			print("✅ Scan Step Completed!")
+			print("   📊 Total Objects Scanned: " .. mapData.TotalCount)
 			print("   🔲 Parts: " .. mapData.PartCount)
 			print("   ⚙️ Unions: " .. mapData.UnionCount)
 			print("   🎨 Meshes: " .. mapData.MeshCount)
 		end
 		
-		-- Yield to prevent freeze
 		game:GetService("RunService").Heartbeat:Wait()
 		
 		-- ========== STAGE 2: Terrain Scan ==========
 		if SeorbConfig.EnableTerrainScan then
-			if options.ShowStatus then print("\n🗺️ Stage 2: Scanning Terrain...") end
 			status.Stage = "TerrainScan"
-			
-			humanizedWait(antiKickDelay() / 5)
 			local terrainData = scanTerrain()
-			
-			if options.ShowStatus and terrainData.Found then 
-				print("✅ Terrain Found")
-			end
 		end
 		
-		-- Yield again
 		game:GetService("RunService").Heartbeat:Wait()
 		
 		-- ========== STAGE 3: Prepare Save Data ==========
-		if options.ShowStatus then print("\n💾 Stage 3: Preparing Save Data...") end
 		status.Stage = "PrepareSave"
-		
-		-- Create save data
 		local saveData = {
 			SaveTime = os.time(),
 			GameName = game.PlaceName or "Unknown",
 			PlaceId = game.PlaceId,
 			UniverseId = game.GameId,
-			
 			Statistics = {
 				TotalObjects = mapData.TotalCount,
 				TotalParts = mapData.PartCount,
 				TotalUnions = mapData.UnionCount,
 				TotalMeshes = mapData.MeshCount,
 			},
-			
 			Configuration = {
 				AntiKickLevel = SeorbConfig.AntiKickLevel,
 				EnableTerrainScan = SeorbConfig.EnableTerrainScan,
 				EnableUnionMeshScan = SeorbConfig.EnableUnionMeshScan,
 				CSGErrorHandling = SeorbConfig.CSGErrorHandling,
 			},
-			
 			ExecutionInfo = {
 				ExecutorName = identifyexecutor and identifyexecutor() or "Unknown",
 				Luau = "native",
 			},
 		}
 		
-		-- Yield before save
 		game:GetService("RunService").Heartbeat:Wait()
 		
 		-- ========== STAGE 4: Save to Workspace ==========
-		if options.ShowStatus then print("\n📁 Stage 4: Saving to Workspace...") end
 		status.Stage = "FileSaving"
-		
 		local saveSuccess = false
 		if SeorbConfig.SaveToExploitWorkspace then
 			local filename = SeorbConfig.FilePath or "SeorbSaveInstance_FullMap"
 			saveSuccess = saveToWorkspace(filename, saveData)
-			
-			if options.ShowStatus then
-				if saveSuccess then
-					print("✅ File Saved Successfully!")
-					print("   📄 File: " .. filename .. ".json")
-				else
-					print("⚠️ Could not save to workspace (writefile not available)")
-				end
-			end
 		end
 		
 		-- ========== COMPLETION ==========
 		local executionTime = tick() - status.StartTime
 		if options.ShowStatus then 
 			print("\n" .. string.rep("=", 50))
-			print("🎉 SAVE COMPLETE!")
-			print("   ⏱️ Execution Time: " .. string.format("%.2f", executionTime) .. "s")
-			print("   🛡️ Anti-Kick Level: " .. SeorbConfig.AntiKickLevel)
-			print("   ✨ Status: " .. (saveSuccess and "SUCCESS" or "PARTIAL"))
+			print("🎉 SAVE PROCESS DONE!")
+			print("   ⏱️ Total Time: " .. string.format("%.2f", executionTime) .. "s")
+			print("   ✨ Status: " .. (saveSuccess and "SUCCESS" or "FAILED/PARTIAL"))
 			print(string.rep("=", 50) .. "\n")
 		end
 		
@@ -364,14 +310,9 @@ local function createSeorbSaveInstance()
 		}
 	end
 	
-	-- ============================================================
-	-- EXPORT
-	-- ============================================================
-	
 	return function(options)
 		return saveInstanceAdvanced(options)
 	end
 end
 
--- Load and return
 return createSeorbSaveInstance()
