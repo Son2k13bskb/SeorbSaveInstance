@@ -183,7 +183,7 @@ local function createSeorbSaveInstance()
 		
 		if SeorbConfig.SaveToExploitWorkspace then
 			if options.ShowStatus then
-				print("📦 Stage 3: Compressing instances and generating binary .rbxl file...")
+				print("📦 Stage 3: Compressing instances and generating binary map file...")
 			end
 			
 			-- Hướng xử lý 1: Dùng API gốc của Executor (Nhanh & Tối ưu nhất)
@@ -210,27 +210,35 @@ local function createSeorbSaveInstance()
 					return loadstring(game:HttpGet("https://raw.githubusercontent.com/luau/UniversalSynSaveInstance/main/source.luau?t=" .. tick()))()
 				end)
 				if ussiSuccess and type(USSI) == "function" then
-					pcall(function()
+					local runSuccess = pcall(function()
 						USSI({
 							filepath = filename,
 							noscripts = SeorbConfig.NoScripts,
 							terrain = SeorbConfig.EnableTerrainScan
 						})
 					end)
-					saveSuccess = true
+					if runSuccess then
+						saveSuccess = true
+					end
 				end
 			end
 		end
 		
-		-- ========== COMPLETION ==========
+		-- ========== COMPLETION LOGIC FIXED ==========
 		local executionTime = tick() - status.StartTime
 		if options.ShowStatus then 
 			print("\n" .. string.rep("=", 50))
-			print("🎉 MAP SAVE PROCESS DONE!")
-			print("   ⏱️ Total Time: " .. string.format("%.2f", executionTime) .. "s")
-			print("   ✨ File Output: " .. filename .. " (.rbxl / .rbxlx)")
-			print("   📊 Status: " .. (saveSuccess and "SUCCESS" or "FAILED"))
-			print("📂 Hãy kiểm tra thư mục 'workspace' trong Executor của bạn!")
+			if saveSuccess then
+				print("🎉 MAP SAVE PROCESS SUCCESSFUL!")
+				print("   ⏱️ Total Time: " .. string.format("%.2f", executionTime) .. "s")
+				print("   ✨ File Output: " .. filename .. " (.rbxl / .rbxlx)")
+				print("📂 Hãy kiểm tra thư mục 'workspace' trong Executor của bạn!")
+			else
+				print("❌ MAP SAVE PROCESS FAILED!")
+				print("   ⏱️ Total Time: " .. string.format("%.2f", executionTime) .. "s")
+				print("   ⚠️ LÝ DO: Executor của bạn không hỗ trợ hàm saveinstance(),")
+				print("      hoặc API chặn tải map. Vui lòng đổi Executor khác mạnh hơn.")
+			end
 			print(string.rep("=", 50) .. "\n")
 		end
 		
