@@ -259,9 +259,16 @@ local function createSeorbSaveInstance()
 		
 		-- ========== STAGE 3: Prepare Save Data ==========
 		status.Stage = "PrepareSave"
+		
+		-- [ĐÃ FIX LỖI Ở ĐÂY]: Tránh crash do lỗi PlaceName
+		local success, placeInfo = pcall(function()
+			return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+		end)
+		local safeGameName = (success and placeInfo and placeInfo.Name) or game.Name or "Unknown"
+
 		local saveData = {
 			SaveTime = os.time(),
-			GameName = game.PlaceName or "Unknown",
+			GameName = safeGameName,
 			PlaceId = game.PlaceId,
 			UniverseId = game.GameId,
 			Statistics = {
