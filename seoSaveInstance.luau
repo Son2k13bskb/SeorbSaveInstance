@@ -1,7 +1,7 @@
 --!native
 --!optimize 2
 --!divine-intellect
--- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (Optimized JSON Buffer)
+-- SeorbSaveInstance v1.1 - Advanced Full Map SaveInstance (Ultimate Safe Fix)
 -- Based on UniversalSynSaveInstance (https://github.com/luau/UniversalSynSaveInstance)
 
 local function createSeorbSaveInstance()
@@ -64,7 +64,6 @@ local function createSeorbSaveInstance()
 	-- ============================================================
 	
 	local function serializeToJSON(data)
-		-- SỬ DỤNG BUFFER ĐỂ TĂNG TỐC ĐỘ NỐI CHUỖI LÊN X10 LẦN
 		local buffer = {}
 		
 		local function serializeValue(v)
@@ -91,7 +90,6 @@ local function createSeorbSaveInstance()
 		end
 		
 		serializeValue(data)
-		-- Nối tất cả lại một lần duy nhất, tránh lag tràn RAM
 		return table.concat(buffer)
 	end
 	
@@ -260,12 +258,12 @@ local function createSeorbSaveInstance()
 		-- ========== STAGE 3: Prepare Save Data ==========
 		status.Stage = "PrepareSave"
 		
-		-- [ĐÃ FIX LỖI Ở ĐÂY]: Tránh crash do lỗi PlaceName
-		local success, placeInfo = pcall(function()
-			return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+		-- Lấy tên game an toàn tuyệt đối, không đụng vào PlaceName nữa
+		local safeGameName = "Unknown Game"
+		pcall(function()
+			safeGameName = game.Name
 		end)
-		local safeGameName = (success and placeInfo and placeInfo.Name) or game.Name or "Unknown"
-
+		
 		local saveData = {
 			SaveTime = os.time(),
 			GameName = safeGameName,
